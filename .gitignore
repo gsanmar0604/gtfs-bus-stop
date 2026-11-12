@@ -12,6 +12,7 @@ build/
 *.iml
 .vscode/
 .fleet/
+local.properties
 
 # OS
 .DS_Store

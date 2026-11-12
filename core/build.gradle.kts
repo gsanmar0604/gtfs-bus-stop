@@ -18,3 +18,8 @@ application {
 tasks.test {
     useJUnitPlatform()
 }
+
+// Run from the repo root so relative paths like data/bizkaibus.zip work as documented.
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.projectDir
+}
