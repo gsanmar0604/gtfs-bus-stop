@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 private const val TARGET_STOP = "S1"
 
@@ -41,6 +42,7 @@ class BusStopViewModel(app: Application) : AndroidViewModel(app) {
         val feed = GtfsFeed.load(cacheDir.toPath())
         val stopName = feed.stopName(TARGET_STOP)
             ?: return FeedState.Error("Stop $TARGET_STOP not found in feed")
-        return FeedState.Ready(stopName, feed.nextDepartures(TARGET_STOP, LocalDateTime.now()))
+        val now = LocalDateTime.now(ZoneId.of("Europe/Madrid"))
+        return FeedState.Ready(stopName, feed.nextDepartures(TARGET_STOP, now))
     }
 }
