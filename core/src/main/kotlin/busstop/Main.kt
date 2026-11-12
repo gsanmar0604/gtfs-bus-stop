@@ -5,9 +5,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.system.exitProcess
 
-private const val TARGET_STOP = "4255"
-private val MADRID = ZoneId.of("Europe/Madrid")
-
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
         System.err.println("Usage: gtfs-bus-stop <path-to-gtfs-zip-or-directory>")
@@ -28,7 +25,7 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    val now = LocalDateTime.now(MADRID)
+    val now = LocalDateTime.now(ZoneId.of(MADRID_ZONE))
     val departures = feed.nextDepartures(TARGET_STOP, now)
     print(renderMarkdown(stopName, departures))
 }

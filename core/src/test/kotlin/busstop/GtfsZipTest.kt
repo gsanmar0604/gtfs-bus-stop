@@ -7,6 +7,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.io.path.createTempFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class GtfsZipTest {
 
@@ -29,11 +30,10 @@ class GtfsZipTest {
             val fromDir = GtfsFeed.load(dir)
             val fromZip = GtfsFeed.load(zip)
 
+            val departures = fromDir.nextDepartures("S1", now)
+            assertTrue(departures.isNotEmpty(), "fixture data must have departures after 07:00")
             assertEquals(fromDir.stopName("S1"), fromZip.stopName("S1"))
-            assertEquals(
-                fromDir.nextDepartures("S1", now),
-                fromZip.nextDepartures("S1", now),
-            )
+            assertEquals(departures, fromZip.nextDepartures("S1", now))
         } finally {
             zip.toFile().delete()
         }

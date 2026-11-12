@@ -1,9 +1,0 @@
-route_id,service_id,trip_id,trip_headsign
-R1,WEEKDAY,T1,Centro
-R1,WEEKDAY,T2,Centro
-R2,WEEKDAY,T3,Basurto
-R1,WEEKDAY,T4,Centro
-R1,WEEKDAY,T5,Centro
-R1,WEEKEND,T6,Centro
-R2,WEEKDAY,T7,Basurto
-R2,WEEKDAY,T8,Basurto

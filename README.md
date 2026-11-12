@@ -46,12 +46,12 @@ Open the project in Android Studio. The `:app` module is the Android application
 - **Run on a device or emulator** via the green Run button.
 - The app shows the next 3 departures for stop 4255 (MOYUA PLAZA 6) using the same
   parsing logic as the CLI — all GTFS code lives in `:core` with no Android dependencies.
-- **To use the real Bizkaibus feed**, push the zip to the app's external files directory
-  before launching:
+- **To use the real Bizkaibus feed**: launch the app once first (so Android creates
+  the app's files directory), then push the zip and relaunch:
   ```
   adb push data/bizkaibus.zip /sdcard/Android/data/busstop.app/files/
   ```
-  Without the zip the app falls back to the bundled hand-written test fixtures.
+  Without the zip the app shows an error message with the exact command to run.
 
 ## Project layout
 
