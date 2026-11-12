@@ -1,6 +1,6 @@
 package busstop
 
-import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.system.exitProcess
@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    val source = Path.of(args[0])
+    val source = Paths.get(args[0])
     if (!source.toFile().exists()) {
         System.err.println("Error: path not found: ${args[0]}")
         exitProcess(1)

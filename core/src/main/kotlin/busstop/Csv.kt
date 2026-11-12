@@ -2,7 +2,7 @@ package busstop
 
 import java.io.Reader
 
-private const val BOM = '﻿'
+private const val BOM = '\uFEFF'
 
 /**
  * Parses a CSV reader into a sequence of rows, each row a map of header → value.

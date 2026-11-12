@@ -1,24 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.1.20"
-    application
-}
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(kotlin("test"))
-}
-
-kotlin {
-    jvmToolchain(21)
-}
-
-application {
-    mainClass.set("busstop.MainKt")
-}
-
-tasks.test {
-    useJUnitPlatform()
+    kotlin("jvm") version "2.1.20" apply false
+    kotlin("android") version "2.1.20" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.20" apply false
+    id("com.android.application") version "8.5.2" apply false
 }
