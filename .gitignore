@@ -20,3 +20,5 @@ Thumbs.db
 # Real GTFS datasets (large, change often): download them instead of committing
 data/
 *.zip
+
+CLAUDE.md
