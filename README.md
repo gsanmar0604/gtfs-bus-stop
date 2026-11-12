@@ -44,10 +44,14 @@ On Windows use `.\gradlew` instead of `./gradlew`.
 Open the project in Android Studio. The `:app` module is the Android application.
 
 - **Run on a device or emulator** via the green Run button.
-- The app bundles the hand-written GTFS fixtures and shows the next 3 departures
-  for the demo stop "Plaza Eliptica" to prove the architecture works end-to-end.
-- All parsing logic lives in `:core` with no Android dependencies; the app only
-  provides the UI layer.
+- The app shows the next 3 departures for stop 4255 (MOYUA PLAZA 6) using the same
+  parsing logic as the CLI — all GTFS code lives in `:core` with no Android dependencies.
+- **To use the real Bizkaibus feed**, push the zip to the app's external files directory
+  before launching:
+  ```
+  adb push data/bizkaibus.zip /sdcard/Android/data/busstop.app/files/
+  ```
+  Without the zip the app falls back to the bundled hand-written test fixtures.
 
 ## Project layout
 
