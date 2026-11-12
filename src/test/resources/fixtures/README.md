@@ -31,9 +31,13 @@ Valid from 2026-11-01 to 2026-12-31.
 
 ## Scenarios
 
-- At 07:00 on a weekday: T1, T2, T3.
-- At 08:20 on a weekday: T3, T4, T5.
-- At 09:10 on a weekday: T5, T7 (only 2 left).
-- At 00:30 on a weekday: the previous day's T7 (25:10) is still ahead, so a
-  correct implementation also looks at the previous day's service.
-- On the holiday 2026-12-08: only T6.
+"Next departures" rolls over into the following days until enough are found.
+
+- Thu 2026-11-12 07:00: T1, T2, T3.
+- Thu 2026-11-12 08:20: T3, T4, T5.
+- Thu 2026-11-12 09:10: T5, then T7 (01:10 Fri), then Friday's T1 (08:00).
+- Fri 2026-11-13 00:30: Thursday's T7 (25:10 = 01:10 Fri) comes first, so an
+  implementation must also look at the previous day's service.
+- Sat 2026-11-14 09:00: T6 Sat, T6 Sun, then Monday's T1.
+- Tue 2026-12-08 07:00 (holiday): T6 that day, then Wednesday's T1 and T2.
+- Fri 2027-01-01 07:00: nothing (the feed ends 2026-12-31).
