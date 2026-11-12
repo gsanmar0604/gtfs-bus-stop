@@ -28,7 +28,7 @@ class BusStopViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun loadDepartures(): FeedState {
         // The feed lives in the app's external files directory (no extra permissions needed).
-        // Push it before opening the app:
+        // Launch the app once first, then push the zip and relaunch:
         //   adb push data/bizkaibus.zip /sdcard/Android/data/busstop.app/files/
         val externalDir = getApplication<Application>().getExternalFilesDir(null)
         val externalZip = externalDir?.let { File(it, FEED_FILENAME) }
