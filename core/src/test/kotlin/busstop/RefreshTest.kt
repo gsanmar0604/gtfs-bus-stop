@@ -8,6 +8,20 @@ import kotlin.test.assertEquals
 
 class RefreshTest {
 
+    // ── minutesUntil ─────────────────────────────────────────────────────────
+
+    @Test
+    fun `minutesUntil truncates to full minutes`() {
+        val now = LocalDateTime.parse("2026-11-13T14:00:00")
+        assertEquals(4L, minutesUntil(now.plusMinutes(4).plusSeconds(30), now))
+    }
+
+    @Test
+    fun `minutesUntil returns 0 when departure is exactly now`() {
+        val now = LocalDateTime.parse("2026-11-13T14:00:00")
+        assertEquals(0L, minutesUntil(now, now))
+    }
+
     // ── delayUntilNextMinute ──────────────────────────────────────────────────
 
     @Test

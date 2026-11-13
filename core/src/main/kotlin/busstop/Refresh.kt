@@ -3,6 +3,10 @@ package busstop
 import java.time.Duration
 import java.time.LocalDateTime
 
+/** Full minutes remaining until [departure]. Returns 0 if already past. */
+fun minutesUntil(departure: LocalDateTime, now: LocalDateTime): Long =
+    maxOf(0, Duration.between(now, departure).toMinutes())
+
 /**
  * How long to wait from [now] until the start of the next minute.
  *
