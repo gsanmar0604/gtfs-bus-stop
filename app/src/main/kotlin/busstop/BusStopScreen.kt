@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 private val TIME_FMT = DateTimeFormatter.ofPattern("HH:mm")
@@ -42,16 +43,21 @@ fun BusStopScreen(viewModel: BusStopViewModel = viewModel()) {
             when (val s = state) {
                 is FeedState.Loading -> CircularProgressIndicator(modifier = Modifier.padding(32.dp))
                 is FeedState.Error   -> Text("Error: ${s.message}", modifier = Modifier.padding(16.dp))
-                is FeedState.Ready   -> DeparturePanel(s.stopName, s.departures)
+                is FeedState.Ready   -> DeparturePanel(s.stopName, s.departures, s.updatedAt)
             }
         }
     }
 }
 
 @Composable
-private fun DeparturePanel(stopName: String, departures: List<Departure>) {
+private fun DeparturePanel(stopName: String, departures: List<Departure>, updatedAt: LocalDateTime) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(stopName, style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Updated ${updatedAt.format(TIME_FMT)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(modifier = Modifier.height(16.dp))
         if (departures.isEmpty()) {
             Text("No upcoming departures.")

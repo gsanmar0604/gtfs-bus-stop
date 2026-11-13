@@ -11,7 +11,7 @@ Language: Kotlin (Gradle, multi-module).
 |---|---|
 | Basic GTFS Parsing (CLI, next 3 departures in Markdown) | Done |
 | Static Bus Stop Info (Android UI) | Done |
-| Dynamic Bus Stop Info (optional) | not started |
+| Dynamic Bus Stop Info (optional) | Done |
 | Dynamic Bus Stop Info with Real-Time GTFS Updates (optional) | not started |
 
 ## Data
@@ -52,6 +52,15 @@ Open the project in Android Studio. The `:app` module is the Android application
   adb push data/bizkaibus.zip /sdcard/Android/data/busstop.app/files/
   ```
   Without the zip the app shows an error message with the exact command to run.
+
+### How the live update works (Feature 3)
+
+The app reuses the same `GtfsFeed` object that is loaded on startup and calls
+`nextDepartures` once per minute, always at the next whole-minute boundary.
+A departure at `08:00` is visible during the entire `08:00:xx` window and
+disappears at the `08:01:00` tick — consistent with the `HH:mm` display.
+The timing helper `delayUntilNextMinute(now)` is a pure function in `:core`
+so it can be unit-tested without Android or coroutines.
 
 ## Project layout
 
