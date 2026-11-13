@@ -142,15 +142,35 @@ class GtfsFeed private constructor(
                 }
             } ?: emptyMap()
 
-        // Streams stop_times line by line to avoid loading all 780k rows into memory.
+        // Streams stop_times in two passes to enforce boarding rules without loading all rows.
         private fun loadStopTimes(open: (String) -> Reader?, stopIds: Set<String>): Map<String, List<StopTime>> {
+            // Pass 1: find the highest stop_sequence for every trip across the whole file.
+            // We must scan every row (not just the target-stop rows) because the row that
+            // proves a trip continues past the stop belongs to a different stop — one the
+            // filter would otherwise throw away.
+            val maxSeqByTrip = mutableMapOf<String, Int>()
+            open("stop_times.txt")?.use { r ->
+                for (row in parseCsv(r)) {
+                    val tripId = row["trip_id"]!!
+                    val seq = row["stop_sequence"]!!.trim().toInt()
+                    if (seq > (maxSeqByTrip[tripId] ?: 0)) maxSeqByTrip[tripId] = seq
+                }
+            }
+
+            // Pass 2: load only the rows for the requested stops, skipping non-boardable ones.
             val result = mutableMapOf<String, MutableList<StopTime>>()
             open("stop_times.txt")?.use { r ->
                 for (row in parseCsv(r)) {
                     val stopId = row["stop_id"]!!
                     if (stopIds.isNotEmpty() && stopId !in stopIds) continue
+                    val tripId = row["trip_id"]!!
+                    val seq = row["stop_sequence"]!!.trim().toInt()
+                    val pickupType = row["pickup_type"]?.trim()?.toIntOrNull() ?: 0
+                    // Skip if no pickup allowed, or if this is the trip's last stop.
+                    // Feeds don't always set pickup_type=1 on the last stop, so check both.
+                    if (pickupType == 1 || seq == maxSeqByTrip[tripId]) continue
                     result.getOrPut(stopId) { mutableListOf() }
-                        .add(StopTime(row["trip_id"]!!, parseGtfsTime(row["departure_time"]!!)))
+                        .add(StopTime(tripId, parseGtfsTime(row["departure_time"]!!)))
                 }
             }
             return result

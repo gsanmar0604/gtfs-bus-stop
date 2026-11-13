@@ -25,7 +25,7 @@ class MidnightStoppingRuleTest {
         val dir = createTempDirectory()
 
         dir.resolve("stops.txt").writeText(
-            "stop_id,stop_name\nS1,Test Stop\n"
+            "stop_id,stop_name\nS1,Test Stop\nS2,Next Stop\n"
         )
         dir.resolve("routes.txt").writeText(
             "route_id,route_short_name\nR1,L1\n"
@@ -37,12 +37,17 @@ class MidnightStoppingRuleTest {
             "T_THU3,R1,THURSDAY,Dest\n" +
             "T_FRI1,R1,FRIDAY,Dest\n"
         )
+        // Each trip continues to S2 so S1 is not the last stop (boarding-rules filter).
         dir.resolve("stop_times.txt").writeText(
             "trip_id,departure_time,arrival_time,stop_id,stop_sequence\n" +
             "T_THU1,23:30:00,23:30:00,S1,1\n" +   // Thu 23:30
+            "T_THU1,23:40:00,23:40:00,S2,2\n" +
             "T_THU2,24:30:00,24:30:00,S1,1\n" +   // Fri 00:30
+            "T_THU2,24:40:00,24:40:00,S2,2\n" +
             "T_THU3,25:10:00,25:10:00,S1,1\n" +   // Fri 01:10
-            "T_FRI1,00:45:00,00:45:00,S1,1\n"     // Fri 00:45
+            "T_THU3,25:20:00,25:20:00,S2,2\n" +
+            "T_FRI1,00:45:00,00:45:00,S1,1\n" +   // Fri 00:45
+            "T_FRI1,00:55:00,00:55:00,S2,2\n"
         )
         dir.resolve("calendar.txt").writeText(
             "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date\n"

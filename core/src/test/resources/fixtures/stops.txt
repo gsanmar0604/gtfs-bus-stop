@@ -1,3 +1,4 @@
 stop_id,stop_name,stop_lat,stop_lon
 S1,Plaza Eliptica,43.263014,-2.934994
 S2,Other Stop,43.265000,-2.930000
+S3,Next Stop,43.267000,-2.926000

@@ -14,10 +14,13 @@ import kotlin.test.assertEquals
 class CalendarEdgeCasesTest {
 
     // Minimal GTFS files shared across both tests.
-    private val stops    = "stop_id,stop_name\nS1,Test Stop\n"
+    // T1 continues to S2 so S1 is not its last stop (boarding-rules filter would skip it otherwise).
+    private val stops    = "stop_id,stop_name\nS1,Test Stop\nS2,Other\n"
     private val routes   = "route_id,route_short_name\nR1,L1\n"
     private val trips    = "trip_id,route_id,service_id,trip_headsign\nT1,R1,SVC1,Dest\n"
-    private val stopTimes = "trip_id,departure_time,arrival_time,stop_id,stop_sequence\nT1,09:00:00,09:00:00,S1,1\n"
+    private val stopTimes = "trip_id,departure_time,arrival_time,stop_id,stop_sequence\n" +
+        "T1,09:00:00,09:00:00,S1,1\n" +
+        "T1,09:10:00,09:10:00,S2,2\n"
     // SVC1 added only on 2026-11-13 (a Friday; unrelated to the shared fixture data).
     private val calendarDates = "service_id,date,exception_type\nSVC1,20261113,1\n"
 

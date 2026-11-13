@@ -20,7 +20,11 @@ Valid from 2026-11-01 to 2026-12-31.
 | T6   | L1    | WEEKEND | 10:00:00 | must not appear on weekdays       |
 | T7   | L2    | WEEKDAY | 25:10:00 | after midnight (01:10 next day)   |
 
-`T8` only serves `S2` (08:20) and must never appear for `S1`.
+`T8` only serves `S2` (08:20) and `S3` (08:30); it must never appear for `S1`.
+
+Every trip continues past `S1` to `S3` (or starts before `S1` at `S2`), so `S1` is
+never the last stop of any trip. This keeps all departures boardable under the
+pickup-rules filter added in task 2.
 
 ## Dates useful in tests
 
