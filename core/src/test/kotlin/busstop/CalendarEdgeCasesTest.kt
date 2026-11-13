@@ -18,7 +18,7 @@ class CalendarEdgeCasesTest {
     private val routes   = "route_id,route_short_name\nR1,L1\n"
     private val trips    = "trip_id,route_id,service_id,trip_headsign\nT1,R1,SVC1,Dest\n"
     private val stopTimes = "trip_id,departure_time,arrival_time,stop_id,stop_sequence\nT1,09:00:00,09:00:00,S1,1\n"
-    // SVC1 added only on 2026-11-13 (a Thursday in the fixture date range).
+    // SVC1 added only on 2026-11-13 (a Friday; unrelated to the shared fixture data).
     private val calendarDates = "service_id,date,exception_type\nSVC1,20261113,1\n"
 
     @Test
