@@ -22,6 +22,21 @@ class RefreshTest {
         assertEquals(0L, minutesUntil(now, now))
     }
 
+    @Test
+    fun `minutesUntil matches the HH-mm times on screen when the tick fires a bit late`() {
+        // The refresh loop wakes a few milliseconds after the minute starts.
+        val lateTick = LocalDateTime.parse("2026-11-13T08:00:00.050")
+        assertEquals(5L, minutesUntil(LocalDateTime.parse("2026-11-13T08:05"), lateTick))
+        assertEquals(1L, minutesUntil(LocalDateTime.parse("2026-11-13T08:01"), lateTick))
+    }
+
+    @Test
+    fun `minutesUntil matches the HH-mm times on screen when loading finishes mid-minute`() {
+        // First screen after launch: 17:58 shown, bus at 18:00 (real feed times have seconds).
+        val midMinute = LocalDateTime.parse("2026-11-13T17:58:30")
+        assertEquals(2L, minutesUntil(LocalDateTime.parse("2026-11-13T18:00:02"), midMinute))
+    }
+
     // ── delayUntilNextMinute ──────────────────────────────────────────────────
 
     @Test
