@@ -53,7 +53,14 @@ class GtfsFeed private constructor(
         var date = now.toLocalDate().minusDays(1)
         val cap = now.toLocalDate().plusDays(14)
 
-        while (candidates.size < limit && !date.isAfter(feedEndDate) && !date.isAfter(cap)) {
+        while (!date.isAfter(feedEndDate) && !date.isAfter(cap)) {
+            // A service day cannot produce a real time earlier than its own midnight.
+            // Once we have `limit` candidates and this day's midnight is not before
+            // the worst of them, nothing from this day or later can improve the answer.
+            if (candidates.size >= limit) {
+                val worstSoFar = candidates.sortedBy { it.time }[limit - 1].time
+                if (!date.atStartOfDay().isBefore(worstSoFar)) break
+            }
             for (st in times) {
                 val trip = trips[st.tripId] ?: continue
                 if (!isActive(trip.serviceId, date)) continue
