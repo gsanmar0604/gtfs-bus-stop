@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileNotFoundException
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -45,19 +46,20 @@ class BusStopViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun loadFeed(): GtfsFeed {
-        // The feed lives in the app's external files directory (no extra permissions needed).
-        // Launch the app once first, then push the zip and relaunch:
-        //   adb push data/bizkaibus.zip /sdcard/Android/data/busstop.app/files/
-        val externalDir = getApplication<Application>().getExternalFilesDir(null)
-        val externalZip = externalDir?.let { File(it, FEED_FILENAME) }
-
-        if (externalZip == null || !externalZip.exists()) {
-            val targetPath = externalDir?.absolutePath ?: "the app's external files directory"
+        // The zip is packed into the APK at build time (see app/build.gradle.kts).
+        // Assets can only be read as streams, but ZipFile needs a real file,
+        // so copy it to the app's cache directory first.
+        val app = getApplication<Application>()
+        val zipFile = File(app.cacheDir, FEED_FILENAME)
+        try {
+            app.assets.open(FEED_FILENAME).use { input ->
+                zipFile.outputStream().use { output -> input.copyTo(output) }
+            }
+        } catch (e: FileNotFoundException) {
             throw IllegalStateException(
-                "No GTFS feed found.\n\nPush it with:\nadb push data/bizkaibus.zip $targetPath/"
+                "GTFS feed not bundled.\n\nPut bizkaibus.zip in data/ and rebuild the app."
             )
         }
-
-        return GtfsFeed.load(externalZip.toPath(), stopIds = setOf(TARGET_STOP))
+        return GtfsFeed.load(zipFile.toPath(), stopIds = setOf(TARGET_STOP))
     }
 }

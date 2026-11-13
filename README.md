@@ -17,7 +17,7 @@ Language: Kotlin (Gradle, multi-module).
 ## Data
 
 The real GTFS feed is not committed. Download the **Bizkaibus** dataset
-from <https://data.ctb.eus/dataset> and place the zip in `data/` (git-ignored).
+from <https://data.ctb.eus/dataset> and save the zip as `data/bizkaibus.zip` (git-ignored).
 
 Unit tests use small hand-written fixtures in
 `core/src/test/resources/fixtures/`.
@@ -43,15 +43,14 @@ On Windows use `.\gradlew` instead of `./gradlew`.
 
 Open the project in Android Studio. The `:app` module is the Android application.
 
-- **Run on a device or emulator** via the green Run button.
+- **Data:** put the Bizkaibus zip at `data/bizkaibus.zip` before building. The build packs it
+  into the app as an asset, so no extra setup is needed on the device. Without it, the app
+  shows a message asking you to add the zip and rebuild.
+- **Why bundled:** simplest to run, works offline, and the dataset still isn't committed.
+  A production app would instead download the feed from CTB on first launch, cache it,
+  and check for updates.
 - The app shows the next 3 departures for stop 4255 (MOYUA PLAZA 6) using the same
   parsing logic as the CLI — all GTFS code lives in `:core` with no Android dependencies.
-- **To use the real Bizkaibus feed**: launch the app once first (so Android creates
-  the app's files directory), then push the zip and relaunch:
-  ```
-  adb push data/bizkaibus.zip /sdcard/Android/data/busstop.app/files/
-  ```
-  Without the zip the app shows an error message with the exact command to run.
 
 ### How the live update works (Feature 3)
 

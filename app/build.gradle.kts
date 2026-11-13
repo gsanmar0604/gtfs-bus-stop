@@ -28,6 +28,10 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    // Pack the GTFS zip into the APK as an asset. Only bizkaibus.zip is copied,
+    // so anything else in data/ (e.g. an unzipped copy) doesn't end up in the app.
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/gtfsAssets").get().asFile)
 }
 
 dependencies {
@@ -39,3 +43,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.5")
 }
+
+val copyGtfsFeed by tasks.registering(Copy::class) {
+    from(rootProject.file("data/bizkaibus.zip"))
+    into(layout.buildDirectory.dir("generated/gtfsAssets"))
+}
+tasks.named("preBuild") { dependsOn(copyGtfsFeed) }
