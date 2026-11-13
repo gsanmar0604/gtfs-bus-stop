@@ -19,7 +19,7 @@ Language: Kotlin (Gradle, multi-module).
 The real GTFS feed is not committed. Download the **Bizkaibus** dataset
 from <https://data.ctb.eus/dataset> and place the zip in `data/` (git-ignored).
 
-Unit tests and the Android demo use small hand-written fixtures in
+Unit tests use small hand-written fixtures in
 `core/src/test/resources/fixtures/`.
 
 ## Build, test, run
