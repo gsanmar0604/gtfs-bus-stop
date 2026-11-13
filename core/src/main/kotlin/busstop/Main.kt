@@ -17,7 +17,12 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    val feed = GtfsFeed.load(source, stopIds = setOf(TARGET_STOP))
+    val feed = try {
+        GtfsFeed.load(source, stopIds = setOf(TARGET_STOP))
+    } catch (e: GtfsFormatException) {
+        System.err.println("Error: ${e.message}")
+        exitProcess(1)
+    }
 
     val stopName = feed.stopName(TARGET_STOP)
     if (stopName == null) {

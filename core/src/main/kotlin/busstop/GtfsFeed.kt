@@ -21,6 +21,11 @@ private fun parseGtfsTime(s: String): Duration {
         .plusSeconds(parts[2].toLong())
 }
 
+// Throws GtfsFormatException if the column is absent or empty (covers short rows too).
+private fun Map<String, String>.required(column: String, file: String): String =
+    this[column]?.takeIf { it.isNotEmpty() }
+        ?: throw GtfsFormatException("$file: missing column '$column'")
+
 private data class ServiceRule(
     val startDate: LocalDate,
     val endDate: LocalDate,
@@ -123,20 +128,30 @@ class GtfsFeed private constructor(
 
         private fun loadStops(open: (String) -> Reader?): Map<String, String> =
             open("stops.txt")?.use { r ->
-                parseCsv(r).associate { it["stop_id"]!! to it["stop_name"]!! }
+                parseCsv(r).associate { row ->
+                    row.required("stop_id", "stops.txt") to row.required("stop_name", "stops.txt")
+                }
             } ?: emptyMap()
 
         private fun loadRouteNames(open: (String) -> Reader?): Map<String, String> =
             open("routes.txt")?.use { r ->
-                parseCsv(r).associate { it["route_id"]!! to it["route_short_name"]!! }
+                parseCsv(r).associate { row ->
+                    val routeId = row.required("route_id", "routes.txt")
+                    // GTFS requires route_short_name or route_long_name (not necessarily both).
+                    val name = row["route_short_name"]?.takeIf { it.isNotEmpty() }
+                        ?: row["route_long_name"]?.takeIf { it.isNotEmpty() }
+                        ?: routeId
+                    routeId to name
+                }
             } ?: emptyMap()
 
         private fun loadTrips(open: (String) -> Reader?, routeNames: Map<String, String>): Map<String, TripInfo> =
             open("trips.txt")?.use { r ->
                 parseCsv(r).associate { row ->
-                    row["trip_id"]!! to TripInfo(
-                        serviceId = row["service_id"]!!,
-                        line = routeNames[row["route_id"]!!] ?: row["route_id"]!!,
+                    val routeId = row.required("route_id", "trips.txt")
+                    row.required("trip_id", "trips.txt") to TripInfo(
+                        serviceId = row.required("service_id", "trips.txt"),
+                        line = routeNames[routeId] ?: routeId,
                         headsign = row["trip_headsign"] ?: "",
                     )
                 }
@@ -151,8 +166,8 @@ class GtfsFeed private constructor(
             val maxSeqByTrip = mutableMapOf<String, Int>()
             open("stop_times.txt")?.use { r ->
                 for (row in parseCsv(r)) {
-                    val tripId = row["trip_id"]!!
-                    val seq = row["stop_sequence"]!!.trim().toInt()
+                    val tripId = row.required("trip_id", "stop_times.txt")
+                    val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
                     if (seq > (maxSeqByTrip[tripId] ?: 0)) maxSeqByTrip[tripId] = seq
                 }
             }
@@ -161,16 +176,20 @@ class GtfsFeed private constructor(
             val result = mutableMapOf<String, MutableList<StopTime>>()
             open("stop_times.txt")?.use { r ->
                 for (row in parseCsv(r)) {
-                    val stopId = row["stop_id"]!!
+                    val stopId = row.required("stop_id", "stop_times.txt")
                     if (stopIds.isNotEmpty() && stopId !in stopIds) continue
-                    val tripId = row["trip_id"]!!
-                    val seq = row["stop_sequence"]!!.trim().toInt()
+                    val tripId = row.required("trip_id", "stop_times.txt")
+                    val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
                     val pickupType = row["pickup_type"]?.trim()?.toIntOrNull() ?: 0
                     // Skip if no pickup allowed, or if this is the trip's last stop.
                     // Feeds don't always set pickup_type=1 on the last stop, so check both.
                     if (pickupType == 1 || seq == maxSeqByTrip[tripId]) continue
+                    // GTFS allows empty departure_time at non-timepoint stops; fall back to arrival_time.
+                    val timeStr = row["departure_time"]?.takeIf { it.isNotEmpty() }
+                        ?: row["arrival_time"]?.takeIf { it.isNotEmpty() }
+                        ?: continue
                     result.getOrPut(stopId) { mutableListOf() }
-                        .add(StopTime(tripId, parseGtfsTime(row["departure_time"]!!)))
+                        .add(StopTime(tripId, parseGtfsTime(timeStr)))
                 }
             }
             return result
@@ -179,17 +198,17 @@ class GtfsFeed private constructor(
         private fun loadCalendar(open: (String) -> Reader?): Map<String, ServiceRule> =
             open("calendar.txt")?.use { r ->
                 parseCsv(r).associate { row ->
-                    row["service_id"]!! to ServiceRule(
-                        startDate = parseGtfsDate(row["start_date"]!!),
-                        endDate = parseGtfsDate(row["end_date"]!!),
+                    row.required("service_id", "calendar.txt") to ServiceRule(
+                        startDate = parseGtfsDate(row.required("start_date", "calendar.txt")),
+                        endDate = parseGtfsDate(row.required("end_date", "calendar.txt")),
                         weekdays = buildSet {
-                            if (row["monday"] == "1") add(DayOfWeek.MONDAY)
-                            if (row["tuesday"] == "1") add(DayOfWeek.TUESDAY)
-                            if (row["wednesday"] == "1") add(DayOfWeek.WEDNESDAY)
-                            if (row["thursday"] == "1") add(DayOfWeek.THURSDAY)
-                            if (row["friday"] == "1") add(DayOfWeek.FRIDAY)
-                            if (row["saturday"] == "1") add(DayOfWeek.SATURDAY)
-                            if (row["sunday"] == "1") add(DayOfWeek.SUNDAY)
+                            if (row.required("monday",    "calendar.txt") == "1") add(DayOfWeek.MONDAY)
+                            if (row.required("tuesday",   "calendar.txt") == "1") add(DayOfWeek.TUESDAY)
+                            if (row.required("wednesday", "calendar.txt") == "1") add(DayOfWeek.WEDNESDAY)
+                            if (row.required("thursday",  "calendar.txt") == "1") add(DayOfWeek.THURSDAY)
+                            if (row.required("friday",    "calendar.txt") == "1") add(DayOfWeek.FRIDAY)
+                            if (row.required("saturday",  "calendar.txt") == "1") add(DayOfWeek.SATURDAY)
+                            if (row.required("sunday",    "calendar.txt") == "1") add(DayOfWeek.SUNDAY)
                         },
                     )
                 }
@@ -199,8 +218,9 @@ class GtfsFeed private constructor(
             val result = mutableMapOf<String, MutableMap<LocalDate, Int>>()
             open("calendar_dates.txt")?.use { r ->
                 for (row in parseCsv(r)) {
-                    result.getOrPut(row["service_id"]!!) { mutableMapOf() }[parseGtfsDate(row["date"]!!)] =
-                        row["exception_type"]!!.trim().toInt()
+                    val dateMap = result.getOrPut(row.required("service_id", "calendar_dates.txt")) { mutableMapOf() }
+                    dateMap[parseGtfsDate(row.required("date", "calendar_dates.txt"))] =
+                        row.required("exception_type", "calendar_dates.txt").trim().toInt()
                 }
             }
             return result
