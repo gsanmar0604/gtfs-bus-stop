@@ -2,6 +2,7 @@
 
 Test task for Posimatiq: read a static [GTFS](https://gtfs.org/) dataset and show
 the next departures for one hard-coded bus stop near Plaza Elíptica, Bilbao.
+Plaza Moyúa (the stop's square) is the name locals use for Plaza Elíptica, so "MOYUA PLAZA 6" is the right stop.
 
 Language: Kotlin (Gradle, multi-module).
 
@@ -43,6 +44,7 @@ On Windows use `.\gradlew` instead of `./gradlew`.
 
 Open the project in Android Studio. The `:app` module is the Android application.
 
+- **Run on a device or emulator** via the green Run button.
 - **Data:** put the Bizkaibus zip at `data/bizkaibus.zip` before building. The build packs it
   into the app as an asset, so no extra setup is needed on the device. Without it, the app
   shows a message asking you to add the zip and rebuild.
