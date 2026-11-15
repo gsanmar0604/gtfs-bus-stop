@@ -1,5 +1,7 @@
 # GTFS Bus Stop
 
+[![Tests](https://github.com/gsanmar0604/gtfs-bus-stop/actions/workflows/tests.yml/badge.svg)](https://github.com/gsanmar0604/gtfs-bus-stop/actions/workflows/tests.yml)
+
 Test task for Posimatiq: read a static [GTFS](https://gtfs.org/) dataset and show
 the next departures for one hard-coded bus stop near Plaza Elíptica, Bilbao.
 Plaza Moyúa (the stop's square) is the name locals use for Plaza Elíptica, so "MOYUA PLAZA 6" is the right stop.
