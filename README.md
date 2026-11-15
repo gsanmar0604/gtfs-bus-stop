@@ -27,8 +27,14 @@ Written in Kotlin: a plain JVM module with all the logic and the CLI, plus an An
 ## Quick start
 
 1. **Get the data.** The GTFS feed is not committed (it is large and replaced every few months).
-   Download the **Bizkaibus** GTFS zip from <https://data.ctb.eus/dataset> and save it as
-   `data/bizkaibus.zip`. The `data/` folder is git-ignored.
+   Download the **Bizkaibus** GTFS zip and save it as `data/bizkaibus.zip` (the `data/` folder is
+   git-ignored):
+   ```sh
+   curl -L --create-dirs -o data/bizkaibus.zip https://ctb-gtfs.s3.eu-south-2.amazonaws.com/bizkaibus.zip
+   ```
+   or use the [direct link](https://ctb-gtfs.s3.eu-south-2.amazonaws.com/bizkaibus.zip) in a browser.
+   If the link ever changes, the feed is listed on CTB's open data portal: <https://data.ctb.eus/dataset>.
+   On Windows PowerShell, type `curl.exe` instead of `curl`.
 2. **Run the tests:** `./gradlew :core:test`
 3. **Run the CLI:** `./gradlew :core:run --args="data/bizkaibus.zip"`
 4. **Run the app:** open the project in Android Studio and press **Run**.
