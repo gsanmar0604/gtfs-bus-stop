@@ -158,40 +158,46 @@ class GtfsFeed private constructor(
                 }
             } ?: emptyMap()
 
-        // Streams stop_times in two passes to enforce boarding rules without loading all rows.
+        // Single pass over stop_times.txt: track the highest stop_sequence for every trip
+        // while collecting candidate rows for the requested stops. The last-stop boarding
+        // rule needs data from the whole file (a later row for a different stop proves a
+        // trip continues), so it can only be applied after the scan is complete.
         private fun loadStopTimes(open: (String) -> Reader?, stopIds: Set<String>): Map<String, List<StopTime>> {
-            // Pass 1: find the highest stop_sequence for every trip across the whole file.
-            // We must scan every row (not just the target-stop rows) because the row that
-            // proves a trip continues past the stop belongs to a different stop — one the
-            // filter would otherwise throw away.
+            data class Candidate(
+                val stopId: String,
+                val tripId: String,
+                val seq: Int,
+                val pickupType: Int,
+                val time: Duration,
+            )
+
             val maxSeqByTrip = mutableMapOf<String, Int>()
+            val candidates = mutableListOf<Candidate>()
+
             open("stop_times.txt")?.use { r ->
                 for (row in parseCsv(r)) {
                     val tripId = row.required("trip_id", "stop_times.txt")
                     val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
                     if (seq > (maxSeqByTrip[tripId] ?: 0)) maxSeqByTrip[tripId] = seq
-                }
-            }
 
-            // Pass 2: load only the rows for the requested stops, skipping non-boardable ones.
-            val result = mutableMapOf<String, MutableList<StopTime>>()
-            open("stop_times.txt")?.use { r ->
-                for (row in parseCsv(r)) {
                     val stopId = row.required("stop_id", "stop_times.txt")
                     if (stopIds.isNotEmpty() && stopId !in stopIds) continue
-                    val tripId = row.required("trip_id", "stop_times.txt")
-                    val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
-                    val pickupType = row["pickup_type"]?.trim()?.toIntOrNull() ?: 0
-                    // Skip if no pickup allowed, or if this is the trip's last stop.
-                    // Feeds don't always set pickup_type=1 on the last stop, so check both.
-                    if (pickupType == 1 || seq == maxSeqByTrip[tripId]) continue
                     // GTFS allows empty departure_time at non-timepoint stops; fall back to arrival_time.
                     val timeStr = row["departure_time"]?.takeIf { it.isNotEmpty() }
                         ?: row["arrival_time"]?.takeIf { it.isNotEmpty() }
                         ?: continue
-                    result.getOrPut(stopId) { mutableListOf() }
-                        .add(StopTime(tripId, parseGtfsTime(timeStr)))
+                    val pickupType = row["pickup_type"]?.trim()?.toIntOrNull() ?: 0
+                    candidates.add(Candidate(stopId, tripId, seq, pickupType, parseGtfsTime(timeStr)))
                 }
+            }
+
+            // Apply boarding rules now that maxSeqByTrip is complete.
+            // Skip pickup_type=1 (no boarding) and the trip's last stop (feeds don't always
+            // mark it with pickup_type=1; checking both is required by GTFS practice).
+            val result = mutableMapOf<String, MutableList<StopTime>>()
+            for (c in candidates) {
+                if (c.pickupType == 1 || c.seq == maxSeqByTrip[c.tripId]) continue
+                result.getOrPut(c.stopId) { mutableListOf() }.add(StopTime(c.tripId, c.time))
             }
             return result
         }
