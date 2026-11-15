@@ -7,17 +7,24 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 private val GTFS_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd")
 
-private fun parseGtfsDate(s: String): LocalDate = LocalDate.parse(s.trim(), GTFS_DATE_FMT)
+internal fun parseGtfsDate(s: String, file: String): LocalDate =
+    try { LocalDate.parse(s.trim(), GTFS_DATE_FMT) }
+    catch (_: DateTimeParseException) { throw GtfsFormatException("$file: invalid date '${s.trim()}'") }
 
-private fun parseGtfsTime(s: String): Duration {
+internal fun parseGtfsTime(s: String, file: String): Duration {
     val parts = s.trim().split(":")
+    if (parts.size != 3) throw GtfsFormatException("$file: invalid time '${s.trim()}'")
     return Duration.ofHours(parts[0].toLong())
         .plusMinutes(parts[1].toLong())
         .plusSeconds(parts[2].toLong())
 }
+
+internal fun parseGtfsInt(s: String, column: String, file: String): Int =
+    s.trim().toIntOrNull() ?: throw GtfsFormatException("$file: invalid integer for '$column': '${s.trim()}'")
 
 // Throws GtfsFormatException if the column is absent or empty (covers short rows too).
 internal fun Map<String, String>.required(column: String, file: String): String =
@@ -47,6 +54,10 @@ class GtfsFeed private constructor(
 ) {
 
     fun stopName(stopId: String): String? = stops[stopId]
+
+    /** Returns [lastServiceDate] when [now] is past it, null otherwise (including during the feed's validity). */
+    fun expiredOn(now: LocalDateTime): LocalDate? =
+        lastServiceDate?.takeIf { now.toLocalDate().isAfter(it) }
 
     fun nextDepartures(stopId: String, now: LocalDateTime, limit: Int = 3): List<Departure> {
         val times = stopTimes[stopId] ?: return emptyList()
@@ -155,7 +166,7 @@ class GtfsFeed private constructor(
             open("stop_times.txt")?.use { r ->
                 for (row in parseCsv(r)) {
                     val tripId = row.required("trip_id", "stop_times.txt")
-                    val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
+                    val seq = parseGtfsInt(row.required("stop_sequence", "stop_times.txt"), "stop_sequence", "stop_times.txt")
                     if (seq > (maxSeqByTrip[tripId] ?: 0)) maxSeqByTrip[tripId] = seq
 
                     val stopId = row.required("stop_id", "stop_times.txt")
@@ -165,7 +176,7 @@ class GtfsFeed private constructor(
                         ?: row["arrival_time"]?.takeIf { it.isNotEmpty() }
                         ?: continue
                     val pickupType = row["pickup_type"]?.trim()?.toIntOrNull() ?: 0
-                    candidates.add(Candidate(stopId, tripId, seq, pickupType, parseGtfsTime(timeStr)))
+                    candidates.add(Candidate(stopId, tripId, seq, pickupType, parseGtfsTime(timeStr, "stop_times.txt")))
                 }
             }
 
@@ -184,8 +195,8 @@ class GtfsFeed private constructor(
             open("calendar.txt")?.use { r ->
                 parseCsv(r).associate { row ->
                     row.required("service_id", "calendar.txt") to ServiceRule(
-                        startDate = parseGtfsDate(row.required("start_date", "calendar.txt")),
-                        endDate = parseGtfsDate(row.required("end_date", "calendar.txt")),
+                        startDate = parseGtfsDate(row.required("start_date", "calendar.txt"), "calendar.txt"),
+                        endDate = parseGtfsDate(row.required("end_date", "calendar.txt"), "calendar.txt"),
                         weekdays = buildSet {
                             if (row.required("monday",    "calendar.txt") == "1") add(DayOfWeek.MONDAY)
                             if (row.required("tuesday",   "calendar.txt") == "1") add(DayOfWeek.TUESDAY)
@@ -204,8 +215,8 @@ class GtfsFeed private constructor(
             open("calendar_dates.txt")?.use { r ->
                 for (row in parseCsv(r)) {
                     val dateMap = result.getOrPut(row.required("service_id", "calendar_dates.txt")) { mutableMapOf() }
-                    dateMap[parseGtfsDate(row.required("date", "calendar_dates.txt"))] =
-                        row.required("exception_type", "calendar_dates.txt").trim().toInt()
+                    dateMap[parseGtfsDate(row.required("date", "calendar_dates.txt"), "calendar_dates.txt")] =
+                        parseGtfsInt(row.required("exception_type", "calendar_dates.txt"), "exception_type", "calendar_dates.txt")
                 }
             }
             return result

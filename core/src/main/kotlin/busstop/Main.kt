@@ -32,9 +32,5 @@ fun main(args: Array<String>) {
 
     val now = LocalDateTime.now(ZoneId.of(MADRID_ZONE))
     val departures = feed.nextDepartures(TARGET_STOP, now)
-    // Show an expiry warning only when the feed has ended and produced no results.
-    val expiredOn = if (departures.isEmpty())
-        feed.lastServiceDate?.takeIf { now.toLocalDate().isAfter(it) }
-    else null
-    print(renderMarkdown(stopName, departures, expiredOn))
+    print(renderMarkdown(stopName, departures, feed.expiredOn(now)))
 }

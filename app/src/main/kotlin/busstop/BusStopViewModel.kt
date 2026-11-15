@@ -24,7 +24,9 @@ class BusStopViewModel @JvmOverloads constructor(
     private val clock: Clock = Clock.system(ZoneId.of(MADRID_ZONE)),
 ) : AndroidViewModel(app) {
 
-    // Cached after the first load so a screen rotation doesn't re-parse the zip.
+    // Cached so coming back after > 5 s doesn't re-parse the zip. A rotation takes
+    // less than 5 s, so WhileSubscribed(5_000) keeps the flow alive — the cache is
+    // never hit for rotation.
     private var feed: GtfsFeed? = null
 
     // The flow runs only while the screen is subscribed (WhileSubscribed).
@@ -39,10 +41,7 @@ class BusStopViewModel @JvmOverloads constructor(
         while (true) {
             val now = LocalDateTime.now(clock)
             val departures = f.nextDepartures(TARGET_STOP, now)
-            val expiredOn = if (departures.isEmpty())
-                f.lastServiceDate?.takeIf { now.toLocalDate().isAfter(it) }
-            else null
-            emit(FeedState.Ready(stopName, departures, now, expiredOn))
+            emit(FeedState.Ready(stopName, departures, now, f.expiredOn(now)))
             delay(delayUntilNextMinute(now).toMillis())
         }
     }

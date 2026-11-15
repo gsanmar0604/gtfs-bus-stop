@@ -7,7 +7,8 @@ Test task for Posimatiq. The program reads the static [GTFS](https://gtfs.org/) 
 on the command line and in an Android app.
 
 **Target Stop:** Bizkaibus stop `4255`, "MOYUA PLAZA 6". It is on Plaza Moyúa (officially
-Plaza Federico Moyúa), the square that locals call **Plaza Elíptica**.
+Plaza Federico Moyúa), the square that locals call **Plaza Elíptica**. The stop is
+hard-coded, as the task specifies.
 
 Written in Kotlin: a plain JVM module with all the logic and the CLI, plus an Android app
 (Jetpack Compose) that reuses it.
@@ -76,7 +77,7 @@ The CLI reads the **complete** dataset, straight from the zip or from a folder. 
 
 ## Tests
 
-All logic lives in `core/` and is unit-tested there (46 tests). GitHub Actions runs them on
+All logic lives in `core/` and is unit-tested there (53 tests). GitHub Actions runs them on
 every push and pull request (badge above).
 
 ```sh
@@ -88,13 +89,13 @@ every push and pull request (badge above).
 | `NextDeparturesTest` (13) | Order, buses that already left, "exactly now", the limit, rolling into the next day, times past 24:00, weekday and weekend service, holidays, end of the feed, unknown stop |
 | `CsvTest` (7) | BOM, quoted fields with commas, escaped quotes, header spaces, blank lines |
 | `RefreshTest` (8) | Countdown minutes, wait until the next minute, departures dropping off as time passes |
-| `GtfsFormatTest` (5) | Missing required columns, short rows, fallbacks for optional columns, empty times |
+| `GtfsFormatTest` (9) | Missing required columns, short rows, fallbacks for optional columns, empty times, malformed times/dates/integers |
 | `MarkdownRendererTest` (4) | Exact output format, times after midnight, empty and expired cases |
 | `FeedSubsetTest` (3) | The app's extract gives exactly the same departures as the full feed |
 | `CalendarEdgeCasesTest` (2) | Service only from `calendar_dates.txt` (the real Bizkaibus pattern); no `calendar.txt` |
 | `MidnightStoppingRuleTest` (1) | A bus at 00:45 is not missed when the previous day has trips after midnight |
 | `BoardingRulesTest` (1) | Buses you can't board are skipped |
-| `ExpiredFeedTest` (1) | The feed's last service date |
+| `ExpiredFeedTest` (4) | The feed's last service date; `expiredOn` before, on, and after expiry; after-midnight departure still visible when expired |
 | `GtfsZipTest` (1) | Reading from a zip and from a folder give the same result |
 
 Most tests use a tiny hand-written feed in `core/src/test/resources/fixtures/`; its
@@ -145,8 +146,8 @@ For each of those trips it keeps the stop's row **and the trip's last row**. Wit
 every trip would seem to end at 4255 and be skipped by the boarding rule. `FeedSubsetTest` checks
 that the extract gives exactly the same departures as the full feed, including around midnight.
 
-This made the app's start-up about **ten times faster** than parsing the full feed (8–10 s on the
-emulator). The CLI still reads the complete dataset.
+This cut the app's start-up from 8–10 s to about 0.8 s on the emulator. The CLI still reads the
+complete dataset.
 
 A production app would download the feed from CTB, cache it and check for updates instead of
 bundling it.
@@ -167,16 +168,16 @@ bundling it.
 
 ### Errors
 
-A missing required GTFS column, or a row shorter than the header, raises a `GtfsFormatException` that
-names the file and column. The CLI prints it and exits with code 1; the app shows it on screen; the
-build fails if it happens while writing the app's extract. Optional columns have fallbacks: the line
-label uses `route_short_name`, then `route_long_name`, then `route_id`.
+A missing required GTFS column, a row shorter than the header, or a malformed value (bad date format,
+non-numeric sequence number, time with the wrong number of parts) raises a `GtfsFormatException` that
+names the file and the bad value. The CLI prints it and exits with code 1; the app shows it on screen;
+the build fails if it happens while writing the app's extract. Optional columns have fallbacks: the
+line label uses `route_short_name`, then `route_long_name`, then `route_id`.
 
 ### Known limitations
 
 - The CSV reader doesn't support line breaks inside quoted fields (GTFS feeds practically never have them).
 - If `data/bizkaibus.zip` is removed without `./gradlew clean`, the app keeps bundling the last extract.
-- Only one hard-coded stop, as the task asks.
 
 ## Project layout
 

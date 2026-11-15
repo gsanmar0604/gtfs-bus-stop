@@ -98,6 +98,72 @@ class GtfsFormatTest {
     }
 
     @Test
+    fun `malformed time in stop_times throws GtfsFormatException naming the file and value`() {
+        val dir = createTempDirectory()
+        try {
+            writeBase(dir)
+            dir.resolve("routes.txt").writeText(baseRoutes)
+            dir.resolve("stop_times.txt").writeText(
+                "trip_id,departure_time,arrival_time,stop_id,stop_sequence\n" +
+                "T1,8:00,8:00,S1,1\n" +   // missing seconds
+                "T1,09:10:00,09:10:00,S2,2\n"
+            )
+            val e = assertFailsWith<GtfsFormatException> { GtfsFeed.load(dir) }
+            assertTrue(e.message!!.contains("stop_times.txt"), "message should name the file")
+            assertTrue(e.message!!.contains("8:00"), "message should name the value")
+        } finally { dir.toFile().deleteRecursively() }
+    }
+
+    @Test
+    fun `single-digit hour like 8 00 00 is a valid GTFS time`() {
+        val dir = createTempDirectory()
+        try {
+            writeBase(dir)
+            dir.resolve("routes.txt").writeText(baseRoutes)
+            dir.resolve("stop_times.txt").writeText(
+                "trip_id,departure_time,arrival_time,stop_id,stop_sequence\n" +
+                "T1,8:00:00,8:00:00,S1,1\n" +
+                "T1,09:10:00,09:10:00,S2,2\n"
+            )
+            val departures = GtfsFeed.load(dir).nextDepartures("S1", LocalDateTime.parse("2026-11-13T07:00"))
+            assertEquals(1, departures.size)
+            assertEquals(LocalDateTime.parse("2026-11-13T08:00"), departures[0].time)
+        } finally { dir.toFile().deleteRecursively() }
+    }
+
+    @Test
+    fun `malformed date in calendar_dates throws GtfsFormatException naming the file and value`() {
+        val dir = createTempDirectory()
+        try {
+            writeBase(dir)
+            dir.resolve("routes.txt").writeText(baseRoutes)
+            dir.resolve("calendar_dates.txt").writeText(
+                "service_id,date,exception_type\nSVC,2026-11-13,1\n"  // wrong format (dashes)
+            )
+            val e = assertFailsWith<GtfsFormatException> { GtfsFeed.load(dir) }
+            assertTrue(e.message!!.contains("calendar_dates.txt"), "message should name the file")
+            assertTrue(e.message!!.contains("2026-11-13"), "message should name the value")
+        } finally { dir.toFile().deleteRecursively() }
+    }
+
+    @Test
+    fun `non-numeric stop_sequence throws GtfsFormatException naming the file and value`() {
+        val dir = createTempDirectory()
+        try {
+            writeBase(dir)
+            dir.resolve("routes.txt").writeText(baseRoutes)
+            dir.resolve("stop_times.txt").writeText(
+                "trip_id,departure_time,arrival_time,stop_id,stop_sequence\n" +
+                "T1,09:00:00,09:00:00,S1,first\n" +
+                "T1,09:10:00,09:10:00,S2,2\n"
+            )
+            val e = assertFailsWith<GtfsFormatException> { GtfsFeed.load(dir) }
+            assertTrue(e.message!!.contains("stop_times.txt"), "message should name the file")
+            assertTrue(e.message!!.contains("first"), "message should name the value")
+        } finally { dir.toFile().deleteRecursively() }
+    }
+
+    @Test
     fun `stop_times row with empty departure_time uses arrival_time as fallback`() {
         val dir = createTempDirectory()
         try {

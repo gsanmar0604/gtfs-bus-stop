@@ -26,7 +26,7 @@ private fun buildSubset(open: (String) -> Reader?, stopId: String, target: Path)
     open("stop_times.txt")?.use { r ->
         for (row in parseCsv(r)) {
             val tripId = row.required("trip_id", "stop_times.txt")
-            val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
+            val seq = parseGtfsInt(row.required("stop_sequence", "stop_times.txt"), "stop_sequence", "stop_times.txt")
             if (seq > (maxSeqByTrip[tripId] ?: 0)) maxSeqByTrip[tripId] = seq
             if (row.required("stop_id", "stop_times.txt") == stopId) servingTrips.add(tripId)
         }
@@ -37,7 +37,7 @@ private fun buildSubset(open: (String) -> Reader?, stopId: String, target: Path)
         writeFiltered(open, "stop_times.txt", zout) { row ->
             val tripId = row.required("trip_id", "stop_times.txt")
             if (tripId !in servingTrips) return@writeFiltered false
-            val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
+            val seq = parseGtfsInt(row.required("stop_sequence", "stop_times.txt"), "stop_sequence", "stop_times.txt")
             row.required("stop_id", "stop_times.txt") == stopId || seq == maxSeqByTrip[tripId]
         }
         writeFiltered(open, "trips.txt", zout) { row ->
