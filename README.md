@@ -88,7 +88,7 @@ The refresh loop runs only while the screen is visible. The `StateFlow` uses
 stops the loop within 5 seconds. Returning to the app restarts the flow and
 recomputes immediately — the display is never stale after the phone wakes.
 A screen rotation reuses the cached `GtfsFeed` in the ViewModel, so there is
-no second 8–10 s parse.
+no second parse.
 
 ## Design notes
 

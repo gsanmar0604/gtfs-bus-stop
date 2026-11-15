@@ -1,14 +1,12 @@
 package busstop
 
 import java.io.Reader
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.zip.ZipFile
 
 private val GTFS_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd")
 
@@ -22,7 +20,7 @@ private fun parseGtfsTime(s: String): Duration {
 }
 
 // Throws GtfsFormatException if the column is absent or empty (covers short rows too).
-private fun Map<String, String>.required(column: String, file: String): String =
+internal fun Map<String, String>.required(column: String, file: String): String =
     this[column]?.takeIf { it.isNotEmpty() }
         ?: throw GtfsFormatException("$file: missing column '$column'")
 
@@ -94,27 +92,7 @@ class GtfsFeed private constructor(
          * Pass [stopIds] to keep only stop_times rows for those stops (saves memory on large feeds).
          */
         fun load(source: Path, stopIds: Set<String> = emptySet()): GtfsFeed =
-            if (source.toString().endsWith(".zip"))
-                loadFromZip(source, stopIds)
-            else
-                loadFromDirectory(source, stopIds)
-
-        private fun loadFromDirectory(dir: Path, stopIds: Set<String>): GtfsFeed {
-            fun open(name: String): Reader? {
-                val p = dir.resolve(name)
-                return if (Files.exists(p)) p.toFile().reader() else null
-            }
-            return build(::open, stopIds)
-        }
-
-        private fun loadFromZip(zipPath: Path, stopIds: Set<String>): GtfsFeed {
-            val zip = ZipFile(zipPath.toFile())
-            fun open(name: String): Reader? {
-                val entry = zip.getEntry(name) ?: return null
-                return zip.getInputStream(entry).bufferedReader()
-            }
-            return try { build(::open, stopIds) } finally { zip.close() }
-        }
+            withGtfsFiles(source) { open -> build(open, stopIds) }
 
         private fun build(open: (String) -> Reader?, stopIds: Set<String>): GtfsFeed {
             val stops = loadStops(open)

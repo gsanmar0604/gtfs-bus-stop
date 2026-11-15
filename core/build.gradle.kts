@@ -32,7 +32,7 @@ val buildFeedSubset by tasks.registering(JavaExec::class) {
     val sourceZip = rootProject.file("data/bizkaibus.zip")
     val targetZip = layout.buildDirectory.file("gtfsSubset/bizkaibus.zip")
     args(sourceZip.absolutePath, targetZip.get().asFile.absolutePath)
-    inputs.file(sourceZip)
+    inputs.file(sourceZip).optional()
     outputs.file(targetZip)
     onlyIf { sourceZip.exists() }
 }
