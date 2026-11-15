@@ -53,4 +53,21 @@ class MarkdownRendererTest {
 
         assertEquals(expected, markdown)
     }
+
+    @Test
+    fun `shows expired message when expiredOn is provided`() {
+        val markdown = renderMarkdown(
+            "Plaza Eliptica",
+            emptyList(),
+            expiredOn = java.time.LocalDate.parse("2027-01-09"),
+        )
+
+        val expected = """
+            ## Next departures at Plaza Eliptica
+
+            Timetable expired on 2027-01-09. Download a newer feed.
+        """.trimIndent() + "\n"
+
+        assertEquals(expected, markdown)
+    }
 }

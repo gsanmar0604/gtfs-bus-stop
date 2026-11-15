@@ -39,7 +39,11 @@ class BusStopViewModel(app: Application) : AndroidViewModel(app) {
             // cannot drift: a late wake-up just shortens the next wait.
             while (true) {
                 val now = LocalDateTime.now(ZoneId.of(MADRID_ZONE))
-                _state.value = FeedState.Ready(stopName, feed.nextDepartures(TARGET_STOP, now), now)
+                val departures = feed.nextDepartures(TARGET_STOP, now)
+                val expiredOn = if (departures.isEmpty())
+                    feed.lastServiceDate?.takeIf { now.toLocalDate().isAfter(it) }
+                else null
+                _state.value = FeedState.Ready(stopName, departures, now, expiredOn)
                 delay(delayUntilNextMinute(now).toMillis())
             }
         }
@@ -55,7 +59,7 @@ class BusStopViewModel(app: Application) : AndroidViewModel(app) {
             app.assets.open(FEED_FILENAME).use { input ->
                 zipFile.outputStream().use { output -> input.copyTo(output) }
             }
-        } catch (e: FileNotFoundException) {
+        } catch (_: FileNotFoundException) {
             throw IllegalStateException(
                 "GTFS feed not bundled.\n\nPut bizkaibus.zip in data/ and rebuild the app."
             )

@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -56,14 +57,18 @@ fun BusStopScreen(viewModel: BusStopViewModel = viewModel()) {
                     Text("Loading timetable…")
                 }
                 is FeedState.Error -> Text("Error: ${s.message}", modifier = Modifier.padding(16.dp))
-                is FeedState.Ready -> DeparturePanel(s.departures, s.updatedAt)
+                is FeedState.Ready -> DeparturePanel(s.departures, s.updatedAt, s.expiredOn)
             }
         }
     }
 }
 
 @Composable
-private fun DeparturePanel(departures: List<Departure>, updatedAt: LocalDateTime) {
+private fun DeparturePanel(
+    departures: List<Departure>,
+    updatedAt: LocalDateTime,
+    expiredOn: LocalDate? = null,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -77,7 +82,11 @@ private fun DeparturePanel(departures: List<Departure>, updatedAt: LocalDateTime
         Spacer(modifier = Modifier.height(12.dp))
         Card(modifier = Modifier.fillMaxWidth()) {
             if (departures.isEmpty()) {
-                Text("No upcoming departures.", modifier = Modifier.padding(16.dp))
+                val message = if (expiredOn != null)
+                    "Timetable expired on $expiredOn.\nDownload a newer feed."
+                else
+                    "No upcoming departures."
+                Text(message, modifier = Modifier.padding(16.dp))
             } else {
                 Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                     DepartureTableHeader()

@@ -1,5 +1,6 @@
 package busstop
 
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 sealed class FeedState {
@@ -8,6 +9,7 @@ sealed class FeedState {
         val stopName: String,
         val departures: List<Departure>,
         val updatedAt: LocalDateTime,
+        val expiredOn: LocalDate? = null,
     ) : FeedState()
     data class Error(val message: String) : FeedState()
 }

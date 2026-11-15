@@ -45,20 +45,21 @@ class GtfsFeed private constructor(
     private val stopTimes: Map<String, List<StopTime>>,
     private val calendar: Map<String, ServiceRule>,
     private val calendarDates: Map<String, Map<LocalDate, Int>>,
-    private val feedEndDate: LocalDate,
+    val lastServiceDate: LocalDate?,   // null when the feed has no calendar data at all
 ) {
 
     fun stopName(stopId: String): String? = stops[stopId]
 
     fun nextDepartures(stopId: String, now: LocalDateTime, limit: Int = 3): List<Departure> {
         val times = stopTimes[stopId] ?: return emptyList()
+        val endDate = lastServiceDate ?: return emptyList()
         val candidates = mutableListOf<Departure>()
 
         // Start one day back: a 25h+ trip from yesterday's service day may still depart after now.
         var date = now.toLocalDate().minusDays(1)
         val cap = now.toLocalDate().plusDays(14)
 
-        while (!date.isAfter(feedEndDate) && !date.isAfter(cap)) {
+        while (!date.isAfter(endDate) && !date.isAfter(cap)) {
             // A service day cannot produce a real time earlier than its own midnight.
             // Once we have `limit` candidates and this day's midnight is not before
             // the worst of them, nothing from this day or later can improve the answer.
@@ -229,12 +230,12 @@ class GtfsFeed private constructor(
         private fun computeFeedEndDate(
             calendar: Map<String, ServiceRule>,
             calendarDates: Map<String, Map<LocalDate, Int>>,
-        ): LocalDate {
+        ): LocalDate? {
             val allDates = buildList {
                 calendar.values.forEach { add(it.endDate) }
                 calendarDates.values.forEach { addAll(it.keys) }
             }
-            return allDates.maxOrNull() ?: LocalDate.MIN
+            return allDates.maxOrNull()
         }
     }
 }
