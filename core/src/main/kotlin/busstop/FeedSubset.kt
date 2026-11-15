@@ -5,7 +5,6 @@ import java.io.Reader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 /**
@@ -17,23 +16,8 @@ import java.util.zip.ZipOutputStream
  *   - trips.txt: only trips that serve [stopId].
  *   - stops.txt, routes.txt, calendar.txt, calendar_dates.txt, agency.txt: copied unchanged.
  */
-fun writeStopSubset(source: Path, stopId: String, target: Path) {
-    if (source.toString().endsWith(".zip")) {
-        ZipFile(source.toFile()).use { zip ->
-            buildSubset(
-                open = { name -> zip.getEntry(name)?.let { zip.getInputStream(it).bufferedReader() } },
-                stopId = stopId,
-                target = target,
-            )
-        }
-    } else {
-        buildSubset(
-            open = { name -> source.resolve(name).takeIf { Files.exists(it) }?.toFile()?.reader() },
-            stopId = stopId,
-            target = target,
-        )
-    }
-}
+fun writeStopSubset(source: Path, stopId: String, target: Path) =
+    withGtfsFiles(source) { open -> buildSubset(open, stopId, target) }
 
 private fun buildSubset(open: (String) -> Reader?, stopId: String, target: Path) {
     // Pass 1: find all trips serving the stop and their max stop_sequence across the whole file.
@@ -41,23 +25,23 @@ private fun buildSubset(open: (String) -> Reader?, stopId: String, target: Path)
     val maxSeqByTrip = mutableMapOf<String, Int>()
     open("stop_times.txt")?.use { r ->
         for (row in parseCsv(r)) {
-            val tripId = row["trip_id"] ?: continue
-            val seq = row["stop_sequence"]?.trim()?.toIntOrNull() ?: continue
+            val tripId = row.required("trip_id", "stop_times.txt")
+            val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
             if (seq > (maxSeqByTrip[tripId] ?: 0)) maxSeqByTrip[tripId] = seq
-            if (row["stop_id"] == stopId) servingTrips.add(tripId)
+            if (row.required("stop_id", "stop_times.txt") == stopId) servingTrips.add(tripId)
         }
     }
 
     Files.createDirectories(target.parent)
     ZipOutputStream(Files.newOutputStream(target)).use { zout ->
         writeFiltered(open, "stop_times.txt", zout) { row ->
-            val tripId = row["trip_id"] ?: return@writeFiltered false
+            val tripId = row.required("trip_id", "stop_times.txt")
             if (tripId !in servingTrips) return@writeFiltered false
-            val seq = row["stop_sequence"]?.trim()?.toIntOrNull() ?: return@writeFiltered false
-            row["stop_id"] == stopId || seq == maxSeqByTrip[tripId]
+            val seq = row.required("stop_sequence", "stop_times.txt").trim().toInt()
+            row.required("stop_id", "stop_times.txt") == stopId || seq == maxSeqByTrip[tripId]
         }
         writeFiltered(open, "trips.txt", zout) { row ->
-            row["trip_id"] in servingTrips
+            row.required("trip_id", "trips.txt") in servingTrips
         }
         for (name in listOf("stops.txt", "routes.txt", "calendar.txt", "calendar_dates.txt", "agency.txt")) {
             copyEntry(open, name, zout)

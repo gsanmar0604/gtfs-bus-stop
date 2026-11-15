@@ -7,6 +7,8 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class FeedSubsetTest {
 
@@ -42,31 +44,13 @@ class FeedSubsetTest {
 
     @Test
     fun `subset preserves the last-stop boarding rule`() {
-        // The same feed as BoardingRulesTest. The key: T_LAST_STOP has two rows —
-        // S2(seq1) and S1(seq2). Without the last-stop row in the subset, S1 would
-        // look like seq1 == maxSeq(1), making T_LAST_STOP appear boardable.
+        // The same feed as BoardingRulesTest. Without the last-stop rows in the subset,
+        // T_NORMAL and T_CONTINUES would have only their S1 row, appear to end at S1,
+        // and be wrongly hidden — producing 0 departures instead of 2.
+        // Keeping each trip's last row prevents that.
         val dir = createTempDirectory()
         try {
-            dir.resolve("stops.txt").writeText("stop_id,stop_name\nS1,Test Stop\nS2,Other\nS3,Further\n")
-            dir.resolve("routes.txt").writeText("route_id,route_short_name\nR1,L1\n")
-            dir.resolve("trips.txt").writeText(
-                "trip_id,route_id,service_id,trip_headsign\n" +
-                "T_NORMAL,R1,SVC,Dest\nT_NO_PICKUP,R1,SVC,Dest\n" +
-                "T_LAST_STOP,R1,SVC,Dest\nT_CONTINUES,R1,SVC,Dest\n"
-            )
-            dir.resolve("stop_times.txt").writeText(
-                "trip_id,departure_time,arrival_time,stop_id,stop_sequence,pickup_type\n" +
-                "T_NORMAL,08:00:00,08:00:00,S1,1,0\n" +
-                "T_NORMAL,08:10:00,08:10:00,S2,2,0\n" +
-                "T_NO_PICKUP,08:30:00,08:30:00,S1,1,1\n" +
-                "T_NO_PICKUP,08:40:00,08:40:00,S2,2,0\n" +
-                "T_LAST_STOP,09:00:00,09:00:00,S2,1,0\n" +
-                "T_LAST_STOP,09:10:00,09:10:00,S1,2,0\n" +  // S1 is the last stop
-                "T_CONTINUES,09:30:00,09:30:00,S2,1,0\n" +
-                "T_CONTINUES,09:40:00,09:40:00,S1,2,0\n" +
-                "T_CONTINUES,09:50:00,09:50:00,S3,3,0\n"
-            )
-            dir.resolve("calendar_dates.txt").writeText("service_id,date,exception_type\nSVC,20261113,1\n")
+            writeBoardingRulesFeed(dir)
 
             val now = LocalDateTime.parse("2026-11-13T07:00")
             val subset = makeSubset(dir, "S1")
@@ -78,6 +62,31 @@ class FeedSubsetTest {
                 assertEquals(LocalDateTime.parse("2026-11-13T09:40"), departures[1].time)
             } finally {
                 Files.deleteIfExists(subset)
+            }
+        } finally {
+            dir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `malformed stop_times throws GtfsFormatException naming the file and column`() {
+        val dir = createTempDirectory()
+        try {
+            dir.resolve("stops.txt").writeText("stop_id,stop_name\nS1,Test\nS2,Other\n")
+            dir.resolve("routes.txt").writeText("route_id,route_short_name\nR1,L1\n")
+            dir.resolve("trips.txt").writeText("trip_id,route_id,service_id\nT1,R1,SVC\n")
+            // stop_sequence column is missing
+            dir.resolve("stop_times.txt").writeText(
+                "trip_id,departure_time,stop_id\nT1,08:00:00,S1\n"
+            )
+            dir.resolve("calendar_dates.txt").writeText("service_id,date,exception_type\nSVC,20261113,1\n")
+            val tmp = Files.createTempFile("subset", ".zip")
+            try {
+                val e = assertFailsWith<GtfsFormatException> { writeStopSubset(dir, "S1", tmp) }
+                assertTrue(e.message!!.contains("stop_times.txt"), "message should name the file")
+                assertTrue(e.message!!.contains("stop_sequence"), "message should name the column")
+            } finally {
+                Files.deleteIfExists(tmp)
             }
         } finally {
             dir.toFile().deleteRecursively()
