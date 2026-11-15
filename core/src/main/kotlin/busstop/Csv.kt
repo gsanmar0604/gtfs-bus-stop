@@ -24,7 +24,7 @@ fun parseCsv(reader: Reader): Sequence<Map<String, String>> = sequence {
     }
 }
 
-private fun splitCsvLine(line: String): List<String> {
+internal fun splitCsvLine(line: String): List<String> {
     val fields = mutableListOf<String>()
     var i = 0
 

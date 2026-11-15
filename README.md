@@ -105,6 +105,12 @@ GTFS departure times can exceed 24:00:00 (the real Bizkaibus feed has ~3,900 suc
 rows). A time of `25:10:00` on a Thursday service date is stored as Friday 01:10.
 The search starts from `now.date - 1` to catch these late-night trips.
 
+### App feed vs CLI feed
+
+The CLI reads the complete dataset. The app uses a subset written at build time by
+`writeStopSubset` (only the target stop's trips, plus each trip's last stop for the
+boarding rule). `FeedSubsetTest` proves it gives the same departures as the full feed.
+
 ## Project layout
 
 ```

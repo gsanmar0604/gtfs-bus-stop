@@ -46,7 +46,8 @@ dependencies {
 }
 
 val copyGtfsFeed by tasks.registering(Copy::class) {
-    from(rootProject.file("data/bizkaibus.zip"))
+    dependsOn(":core:buildFeedSubset")
+    from(project(":core").layout.buildDirectory.file("gtfsSubset/bizkaibus.zip"))
     into(layout.buildDirectory.dir("generated/gtfsAssets"))
 }
 tasks.named("preBuild") { dependsOn(copyGtfsFeed) }
