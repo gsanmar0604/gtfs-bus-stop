@@ -2,50 +2,51 @@
 
 [![Tests](https://github.com/gsanmar0604/gtfs-bus-stop/actions/workflows/tests.yml/badge.svg)](https://github.com/gsanmar0604/gtfs-bus-stop/actions/workflows/tests.yml)
 
-Test task for Posimatiq: read a static [GTFS](https://gtfs.org/) dataset and show
-the next departures for one hard-coded bus stop near Plaza Elíptica, Bilbao.
-The stop is on Plaza Moyúa (officially Plaza Federico Moyúa), which locals call Plaza Elíptica, so "MOYUA PLAZA 6" is the right stop.
+Test task for Posimatiq. The program reads the static [GTFS](https://gtfs.org/) timetable of
+**Bizkaibus** and shows the **next 3 departures** from one hard-coded bus stop in Bilbao, both
+on the command line and in an Android app.
 
-Language: Kotlin (Gradle, multi-module).
+**Target Stop:** Bizkaibus stop `4255`, "MOYUA PLAZA 6". It is on Plaza Moyúa (officially
+Plaza Federico Moyúa), the square that locals call **Plaza Elíptica**.
+
+Written in Kotlin: a plain JVM module with all the logic and the CLI, plus an Android app
+(Jetpack Compose) that reuses it.
+
+![App screenshot](docs/screenshot.png)
 
 ## Features
 
-| Feature | Status |
-|---|---|
-| Basic GTFS Parsing (CLI, next 3 departures in Markdown) | Done |
-| Static Bus Stop Info (Android UI) | Done |
-| Dynamic Bus Stop Info (optional) | Done |
-| Dynamic Bus Stop Info with Real-Time GTFS Updates (optional) | not started |
+| # | Feature | Status | Where |
+|---|---|---|---|
+| 1 | Basic GTFS Parsing: CLI printing the next 3 departures as Markdown | Done | `core/` |
+| 2 | Static Bus Stop Info: the same departures in a graphical UI | Done | `app/` |
+| 3 | Dynamic Bus Stop Info: the screen updates itself as time passes | Done (optional) | `app/` |
+| 4 | Real-time updates from GTFS-rt | Out of scope (needs a Phoenix backend) | |
 
-## Data
+## Quick start
 
-The real GTFS feed is not committed. Download the **Bizkaibus** dataset
-from <https://data.ctb.eus/dataset> and save the zip as `data/bizkaibus.zip` (git-ignored).
+1. **Get the data.** The GTFS feed is not committed (it is large and replaced every few months).
+   Download the **Bizkaibus** GTFS zip from <https://data.ctb.eus/dataset> and save it as
+   `data/bizkaibus.zip`. The `data/` folder is git-ignored.
+2. **Run the tests:** `./gradlew :core:test`
+3. **Run the CLI:** `./gradlew :core:run --args="data/bizkaibus.zip"`
+4. **Run the app:** open the project in Android Studio and press **Run**.
 
-Unit tests use small hand-written fixtures in
-`core/src/test/resources/fixtures/`.
+On Windows, use `.\gradlew` instead of `./gradlew`. Requires JDK 21; the app also needs the
+Android SDK (Android Studio installs it).
 
-## Build, test, run
-
-### CLI (Feature 1)
+## Feature 1: command line
 
 ```sh
-# Run all unit tests
-./gradlew :core:test
-
-# Print next 3 departures for stop 4255 (MOYUA PLAZA 6) from a zip
 ./gradlew :core:run --args="data/bizkaibus.zip"
 
-# Or from an already-unzipped directory
-./gradlew :core:run --args="data"
+# or, after unzipping data/bizkaibus.zip into data/bizkaibus/
+./gradlew :core:run --args="data/bizkaibus"
 ```
 
-On Windows use `.\gradlew` instead of `./gradlew`.
-
-Sample output:
+The CLI reads the **complete** dataset, straight from the zip or from a folder. Sample output:
 
 ```markdown
-> Task :core:run
 ## Next departures at MOYUA PLAZA 6 (4255)
 
 | Time | Line | Destination |
@@ -53,67 +54,145 @@ Sample output:
 | 16:00 | A3518 | BAKIO (Aut.) |
 | 17:00 | A3527 | BERMEO |
 | 18:00 | A3518 | BAKIO (Aut.) |
-
-BUILD SUCCESSFUL in 3s
-2 actionable tasks: 1 executed, 1 up-to-date
 ```
 
-### Android app (Feature 2)
+- **Time** is the real clock time (a GTFS time of `25:10:00` prints as `01:10`).
+- **Line** is the route's short name. **Destination** is the trip's headsign.
+- With no departures it prints `No upcoming departures.`. After the feed's last service date it
+  prints `Timetable expired on <date>. Download a newer feed.` instead.
+- It exits with a non-zero code and a clear message on stderr when the path is missing, the stop
+  is not in the feed, or a required GTFS column is missing.
 
-Open the project in Android Studio. The `:app` module is the Android application.
+## Features 2 and 3: Android app
 
-- **Run on a device or emulator** via the green Run button.
-- **Data:** put the Bizkaibus zip at `data/bizkaibus.zip` before building. The build packs it
-  into the app as an asset, so no extra setup is needed on the device. Without it, the app
-  shows a message asking you to add the zip and rebuild.
-- **Why bundled:** simplest to run, works offline, and the dataset still isn't committed.
-  A production app would instead download the feed from CTB on first launch, cache it,
-  and check for updates.
-- The app shows the next 3 departures for stop 4255 (MOYUA PLAZA 6) using the same
-  parsing logic as the CLI — all GTFS code lives in `:core` with no Android dependencies.
+- Put the zip at `data/bizkaibus.zip` **before building**. The build packs a small extract of it
+  into the app (see "The app's feed" below), so nothing needs to be copied to the device.
+  Without the zip, the app builds but shows "GTFS feed not bundled".
+- The screen shows the stop name, when it was last updated, and the next 3 departures with
+  their time, a countdown ("in 4 min" / "now"), the line and the destination.
+- **Live updates (feature 3):** the departures are recalculated at the start of every minute,
+  so a bus disappears once its minute has passed and the countdowns tick down.
+- It works offline: the timetable is inside the app.
 
-![App screenshot](docs/screenshot.png)
+## Tests
 
-### How the live update works (Feature 3)
+All logic lives in `core/` and is unit-tested there (46 tests). GitHub Actions runs them on
+every push and pull request (badge above).
 
-The app reuses the same `GtfsFeed` object that is loaded on startup and calls
-`nextDepartures` once per minute, always at the next whole-minute boundary.
-A departure at `08:00` is visible during the entire `08:00:xx` window and
-disappears at the `08:01:00` tick — consistent with the `HH:mm` display.
-The timing helper `delayUntilNextMinute(now)` is a pure function in `:core`
-so it can be unit-tested without Android or coroutines.
+```sh
+./gradlew :core:test
+```
 
-The refresh loop runs only while the screen is visible. The `StateFlow` uses
-`SharingStarted.WhileSubscribed(5_000)`, so putting the app in the background
-stops the loop within 5 seconds. Returning to the app restarts the flow and
-recomputes immediately — the display is never stale after the phone wakes.
-A screen rotation reuses the cached `GtfsFeed` in the ViewModel, so there is
-no second parse.
+| Test file | What it checks |
+|---|---|
+| `NextDeparturesTest` (13) | Order, buses that already left, "exactly now", the limit, rolling into the next day, times past 24:00, weekday and weekend service, holidays, end of the feed, unknown stop |
+| `CsvTest` (7) | BOM, quoted fields with commas, escaped quotes, header spaces, blank lines |
+| `RefreshTest` (8) | Countdown minutes, wait until the next minute, departures dropping off as time passes |
+| `GtfsFormatTest` (5) | Missing required columns, short rows, fallbacks for optional columns, empty times |
+| `MarkdownRendererTest` (4) | Exact output format, times after midnight, empty and expired cases |
+| `FeedSubsetTest` (3) | The app's extract gives exactly the same departures as the full feed |
+| `CalendarEdgeCasesTest` (2) | Service only from `calendar_dates.txt` (the real Bizkaibus pattern); no `calendar.txt` |
+| `MidnightStoppingRuleTest` (1) | A bus at 00:45 is not missed when the previous day has trips after midnight |
+| `BoardingRulesTest` (1) | Buses you can't board are skipped |
+| `ExpiredFeedTest` (1) | The feed's last service date |
+| `GtfsZipTest` (1) | Reading from a zip and from a folder give the same result |
+
+Most tests use a tiny hand-written feed in `core/src/test/resources/fixtures/`; its
+[README](core/src/test/resources/fixtures/README.md) lists every trip and why it is there.
+The app has no unit tests of its own: it only displays what `core` calculates.
 
 ## Design notes
 
-### Which stop times are shown
+### Times past midnight
 
-A stop time is skipped if `pickup_type = 1` (no passengers board) or if it is
-the trip's last stop. Feeds don't always mark the last stop with `pickup_type = 1`,
-so both conditions are checked. The check requires a full scan of `stop_times.txt`
-to find each trip's highest `stop_sequence` before the per-stop filter is applied.
+GTFS times count from the start of the **service day** and can exceed 24 hours: `25:10:00` on
+a Thursday service means **01:10 on Friday**. Times are parsed as a `Duration`, not a clock time,
+and added to the service date. Because yesterday's service can still have buses after midnight,
+the search starts at **yesterday's** date.
 
-### GTFS times past midnight
+### Which days a trip runs
 
-GTFS departure times can exceed 24:00:00 (the real Bizkaibus feed has ~3,900 such
-rows). A time of `25:10:00` on a Thursday service date is stored as Friday 01:10.
-The search starts from `now.date - 1` to catch these late-night trips.
+A trip runs on a date if its service is active: the weekly pattern in `calendar.txt`, overridden
+by the exceptions in `calendar_dates.txt` (1 = added, 2 = removed). In the real Bizkaibus feed every
+weekday flag in `calendar.txt` is 0, so all service comes from `calendar_dates.txt`.
 
-### App feed vs CLI feed
+### Finding the next 3
 
-The CLI reads the complete dataset. The app uses a subset written at build time by
-`writeStopSubset` (only the target stop's trips, plus each trip's last stop for the
-boarding rule). `FeedSubsetTest` proves it gives the same departures as the full feed.
+Departures at or after "now" are collected day by day, starting yesterday. The search stops once the
+next day's midnight is later than the 3rd-best departure found: a day can't produce anything earlier
+than its own midnight. That rule matters around midnight, where the previous day's `24:xx`/`25:xx`
+trips mix with the next day's early ones. The search also stops at the feed's last service date or
+after 14 days.
+
+### Buses you can't board
+
+A stop time is skipped if `pickup_type` is `1` (no boarding) or if the stop is the **last stop of
+the trip** (the bus ends there). Feeds don't always mark the last stop with `pickup_type = 1`, so
+both are checked. Knowing whether a stop is the last one needs every row of the trip, so
+`stop_times.txt` is read once, recording each trip's highest `stop_sequence`, and the rule is
+applied after that single pass.
+
+### Large file, small memory
+
+`stop_times.txt` has about 780,000 rows. It is streamed line by line, and only the target stop's
+rows are kept. Files that aren't needed (`shapes.txt`, fares) are never opened.
+
+### The app's feed: a build-time extract
+
+The app always shows one stop, so it doesn't need the whole timetable. At build time,
+`writeStopSubset` (in `core`) writes a small zip with only the trips that serve stop 4255.
+For each of those trips it keeps the stop's row **and the trip's last row**. Without that last row,
+every trip would seem to end at 4255 and be skipped by the boarding rule. `FeedSubsetTest` checks
+that the extract gives exactly the same departures as the full feed, including around midnight.
+
+This made the app's start-up about **ten times faster** than parsing the full feed (8–10 s on the
+emulator). The CLI still reads the complete dataset.
+
+A production app would download the feed from CTB, cache it and check for updates instead of
+bundling it.
+
+### Live updates and the Android lifecycle
+
+- The feed is loaded once and kept in the `ViewModel`. Every minute, the departures are recalculated
+  from that object; the wait until the next minute is calculated from a fresh "now" each time, so the
+  timer can't drift.
+- The countdown is the difference between the two `HH:mm` times on screen, so it always matches them.
+- The updates run as a `Flow` exposed with `stateIn(…, WhileSubscribed(5_000), …)` and collected with
+  `collectAsStateWithLifecycle()`. They stop when the app goes to the background (after 5 s) and
+  restart, with an immediate recalculation, when it comes back, so the screen is never out of date
+  after the phone wakes. A rotation takes less than 5 s, so it doesn't restart anything. After a longer
+  absence, the cached feed means there is nothing to reload.
+- "Now" comes from an injected `java.time.Clock`, so the time can be fixed for checking by hand
+  (for example just before midnight).
+
+### Errors
+
+A missing required GTFS column, or a row shorter than the header, raises a `GtfsFormatException` that
+names the file and column. The CLI prints it and exits with code 1; the app shows it on screen; the
+build fails if it happens while writing the app's extract. Optional columns have fallbacks: the line
+label uses `route_short_name`, then `route_long_name`, then `route_id`.
+
+### Known limitations
+
+- The CSV reader doesn't support line breaks inside quoted fields (GTFS feeds practically never have them).
+- If `data/bizkaibus.zip` is removed without `./gradlew clean`, the app keeps bundling the last extract.
+- Only one hard-coded stop, as the task asks.
 
 ## Project layout
 
 ```
-core/   JVM library + CLI — GTFS parsing, departure logic, Markdown output
-app/    Android application — Compose UI, reuses :core
+core/                   JVM module: GTFS parsing, departure logic, Markdown output, CLI, unit tests
+  src/main/kotlin/busstop/
+    GtfsFeed.kt         loading the feed, service calendars, boarding rule, next departures
+    Csv.kt              small CSV reader (BOM, quoted fields)
+    GtfsSource.kt       opens a GTFS zip or folder
+    FeedSubset.kt       writes the app's one-stop extract
+    MarkdownRenderer.kt CLI output
+    Refresh.kt          minute-based timing and countdown
+    Config.kt           target stop and time zone
+    Main.kt, SubsetMain.kt   command-line entry points
+app/                    Android app: Compose UI and ViewModel, reuses core
+data/                   the GTFS zip (git-ignored, download it yourself)
+docs/                   screenshot
+.github/workflows/      CI running the unit tests
 ```
