@@ -83,8 +83,8 @@ The CLI reads the **complete** dataset, straight from the zip or from a folder. 
 
 ## Tests
 
-All logic lives in `core/` and is unit-tested there (53 tests). GitHub Actions runs them on
-every push and pull request (badge above).
+All logic lives in `core/` and is unit-tested there (64 tests). GitHub Actions runs them on
+every push and pull request (badge above) and reports line and branch coverage for `core`.
 
 ```sh
 ./gradlew :core:test
@@ -95,7 +95,7 @@ every push and pull request (badge above).
 | `NextDeparturesTest` (13) | Order, buses that already left, "exactly now", the limit, rolling into the next day, times past 24:00, weekday and weekend service, holidays, end of the feed, unknown stop |
 | `CsvTest` (7) | BOM, quoted fields with commas, escaped quotes, header spaces, blank lines |
 | `RefreshTest` (8) | Countdown minutes, wait until the next minute, departures dropping off as time passes |
-| `GtfsFormatTest` (9) | Missing required columns, short rows, fallbacks for optional columns, empty times, malformed times/dates/integers |
+| `GtfsFormatTest` (10) | Missing required columns, short rows, fallbacks for optional columns, empty times, malformed times/dates/integers |
 | `MarkdownRendererTest` (4) | Exact output format, times after midnight, empty and expired cases |
 | `FeedSubsetTest` (3) | The app's extract gives exactly the same departures as the full feed |
 | `CalendarEdgeCasesTest` (2) | Service only from `calendar_dates.txt` (the real Bizkaibus pattern); no `calendar.txt` |
@@ -103,6 +103,14 @@ every push and pull request (badge above).
 | `BoardingRulesTest` (1) | Buses you can't board are skipped |
 | `ExpiredFeedTest` (4) | The feed's last service date; `expiredOn` before, on, and after expiry; after-midnight departure still visible when expired |
 | `GtfsZipTest` (1) | Reading from a zip and from a folder give the same result |
+| `MainTest` (6) | CLI exit codes and output: no args, missing path, unknown stop, malformed feed, success, expired feed |
+| `SubsetMainTest` (4) | Subset CLI: wrong arg count, missing source, malformed feed, success |
+
+CI measures line and branch coverage for `:core` with JaCoCo and uploads the full HTML report
+as a build artifact. Measured on 2026-11-15: **98.0% of lines** (288/294) and **82.8% of branches**
+(207/250). The two entry-point functions (`runCli`, `runSubset`) are tested through their
+`main` wrappers; the Android app is not unit-tested by design (it only displays what `core`
+calculates).
 
 Most tests use a tiny hand-written feed in `core/src/test/resources/fixtures/`; its
 [README](core/src/test/resources/fixtures/README.md) lists every trip and why it is there.

@@ -28,6 +28,18 @@ class GtfsFormatTest {
     }
 
     @Test
+    fun `missing both route_short_name and route_long_name falls back to route_id`() {
+        val dir = createTempDirectory()
+        try {
+            writeBase(dir)
+            dir.resolve("routes.txt").writeText("route_id\nR1\n")
+            val departures = GtfsFeed.load(dir).nextDepartures("S1", LocalDateTime.parse("2026-11-13T08:00"))
+            assertEquals(1, departures.size)
+            assertEquals("R1", departures[0].line)
+        } finally { dir.toFile().deleteRecursively() }
+    }
+
+    @Test
     fun `missing route_short_name falls back to route_long_name`() {
         val dir = createTempDirectory()
         try {

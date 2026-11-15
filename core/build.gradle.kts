@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm")
     application
+    jacoco
 }
 
 dependencies {
@@ -17,6 +18,15 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 // Run from the repo root so relative paths like data/bizkaibus.zip work as documented.

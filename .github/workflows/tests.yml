@@ -13,3 +13,24 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew :core:test
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          root = ET.parse("core/build/reports/jacoco/test/jacocoTestReport.xml").getroot()
+          print("## Test coverage (core)")
+          for c in root.findall("counter"):
+              if c.get("type") in ("LINE", "BRANCH"):
+                  missed, covered = int(c.get("missed")), int(c.get("covered"))
+                  total = missed + covered
+                  print(f"- {c.get('type').title()}: {100 * covered / total:.1f}% ({covered}/{total})")
+          PY
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: core/build/reports/jacoco/test/html
