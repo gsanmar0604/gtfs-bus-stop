@@ -81,6 +81,29 @@ The CLI reads the **complete** dataset, straight from the zip or from a folder. 
   so a bus disappears once its minute has passed and the countdowns tick down.
 - It works offline: the timetable is inside the app.
 
+### Building the APK without Android Studio
+
+Requires JDK 21 and the Android SDK. Tell Gradle where the SDK is with the `ANDROID_HOME`
+environment variable, or a `local.properties` file in the project root containing
+`sdk.dir=<path to the SDK>` (Android Studio creates this file for you; it is git-ignored
+because the path differs on each machine). Put the feed at `data/bizkaibus.zip` first: the
+build packs its extract into the app.
+
+```sh
+./gradlew :app:assembleDebug
+```
+
+The APK is written to `app/build/outputs/apk/debug/app-debug.apk`. To install it on a
+connected device or a running emulator:
+
+```sh
+./gradlew :app:installDebug
+# or: adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+This is a debug build (signed with the standard debug key), fine for trying the app.
+It needs Android 8.0 or later.
+
 ## Tests
 
 All logic lives in `core/` and is unit-tested there (64 tests). GitHub Actions runs them on
